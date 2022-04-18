@@ -44,15 +44,45 @@ class HumanAgent(Agent):
         super().__init__(unique_id, model)
         self.appliances = applianceAgents
         self.age = age
-        self.hunger = 0
+        self.food = 60
+        self.meal_of_the_day = 1
         self.dishes = 0
-        self.clothes = 0
-        self.energy = 100
+        self.laundry_capacity = 1440 * 7 / 2
+        self.laundry = randint(0, self.laundry_capacity)
+        # self.energy = 100
 
         self.busy_until = 0
 
     def schedule_activity(self):
-        activity_length = random.randint(0, 10)
+        activity_length = 1 # resting - time filler
+
+        # first and foremost, the user will worry about how hungry they are
+        if (self.food < 0):
+            # make something
+            if (self.meal_of_the_day == 1):
+                # make breakfast using kettle
+                activity_length = 20
+                self.food += 240
+            elif (self.meal_of_the_day == 2):
+                # lunch using stove
+                activity_length = 40
+                self.food += 300
+            else:
+                # dinner using oven and stove
+                activity_length = 60
+                self.food += 400 # 360 until the end of the day and then another 60 for the morning after ;)
+        
+        # then they will check their laundry
+        if (self.laundry > self.laundry_capacity):
+            activity_length = 5
+        
+        # 20-30 minute interval using computer,
+        # this is roughly 8 hours, so
+        # 8/14 of the hours awake and not eating
+        if (random.randint(0, 12) < 8):
+            activity_length = random.randint(20, 30)
+            # computer use
+
         self.busy_until = self.model.schedule.steps + activity_length
         print("Activity scheduled for " + str(activity_length) + " minutes")
 
