@@ -1,0 +1,5 @@
+This project will create a model of the energy demand of an individual household using a combination of agent-based and monte-carlo approaches. The model will be at the device level (TV, fridge, electric vehicle, shower, oven, electric heater etc), together with probabilistic behavioural models of the household occupants which induce demand on the devices across a given period of time. Heterogenous collections of household models can be combined to simulate communities, and predict potential peak demand spikes which local and national electricity infrastructure would need to respond to. If the initial simulation is developed in sufficient time, then increased challenge can be created in this project by simulating different interventions – such as time-variable tariffs or demand caps – and their impact on the household occupants.
+
+# Tech
+
+Using mesa for the simulations currently
