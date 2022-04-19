@@ -13,6 +13,7 @@ class ContinuousAppliance(Appliance):
         super().__init__(name, True)
         self.load = load
         self.scaling = scaling
+    
 
 class CycleAppliance(Appliance):
     def __init__(self, name, useCycle, postUseCycle, scaling):
@@ -28,16 +29,33 @@ global_appliances = {
     "washing machine": CycleAppliance("washing machine", [(0, 5)], [(2000, 20), (100, 30), (500, 5), (100, 15), (500, 10)], [1]),
     "computer": ContinuousAppliance("computer", 200, [1]),
     "oven": ContinuousAppliance("oven", 2300, [1, 1.5, 1.8, 2, 2, 2, 2, 2]),
-    "kettle": CycleAppliance("kettle", [(0, 1)], [2000, 3], [1, 1.5, 1.5]),
+    "kettle": CycleAppliance("kettle", [(0, 1)], [(2000, 3)], [1, 1.5, 1.5]),
     "stove": ContinuousAppliance("stove", 1000, [1, 1.5, 2, 2.5, 3, 3])
 }
-    
+
 
 class ApplianceAgent(Agent):
     def __init__(self, unique_id, model, appliance):
         super().__init__(unique_id, model)
         self.appliance = appliance
 
+    def use(self, power, startMinute):
+        # cycle appliance use
+        i = startMinute
+        for duration, load in self.appliance.useCycle:
+            for _ in range(duration):
+                power[i] += load
+                i += 1
+        for duration, load in self.appliance.postUseCycle:
+            for _ in range(duration):
+                power[i] += load
+                i += 1
+        
+    
+    def use(self, power, startMinute, duration):
+        # continuous appliance
+        for i in range(startMinute, startMinute + duration):
+            power[i] += self.appliance.load
 
 class HumanAgent(Agent):
     def __init__(self, unique_id, model, applianceAgents, age):
@@ -48,10 +66,11 @@ class HumanAgent(Agent):
         self.meal_of_the_day = 1
         self.dishes = 0
         self.laundry_capacity = 1440 * 7 / 2
-        self.laundry = randint(0, self.laundry_capacity)
+        self.laundry = random.randint(0, self.laundry_capacity)
         # self.energy = 100
 
         self.busy_until = 0
+        self.power = [0] * 1440
 
     def schedule_activity(self):
         activity_length = 1 # resting - time filler
@@ -61,6 +80,7 @@ class HumanAgent(Agent):
             # make something
             if (self.meal_of_the_day == 1):
                 # make breakfast using kettle
+
                 activity_length = 20
                 self.food += 240
             elif (self.meal_of_the_day == 2):
@@ -87,14 +107,8 @@ class HumanAgent(Agent):
         print("Activity scheduled for " + str(activity_length) + " minutes")
 
     def step(self):
-        # due for cooking
-
-        # due for laundry
-
-
         if(self.busy_until <= self.model.schedule.steps):
             self.schedule_activity()
-            print("Activity schedules for agent " + str(self.unique_id))
 
 
 class HouseModel(Model):
@@ -112,7 +126,7 @@ class HouseModel(Model):
     def step(self):
         self.schedule.step()
 
-test_model = HouseModel([21], [ value for _, value in global_appliances ])
+test_model = HouseModel([21], global_appliances.values())
 for _ in range(1440):
     test_model.step()
 
