@@ -97,8 +97,9 @@ class HumanAgent(Agent):
             self.meal_of_the_day += 1
         # then they will check their laundry
         elif (self.laundry > self.laundry_capacity):
-            activity_length = 5
+            activity_length = self.appliances["washing machine"].appliance.useCycleLength
             self.appliances["washing machine"].use(self.power, current_step)
+            self.laundry -= self.laundry_capacity
         # 20-30 minute interval using computer,
         # this is roughly 8 hours, so
         # 8/14 of the hours awake and not eating
