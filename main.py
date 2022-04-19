@@ -31,26 +31,25 @@ class ApplianceAgent(Agent):
     def __init__(self, unique_id, model, appliance):
         super().__init__(unique_id, model)
         self.appliance = appliance
-
-    def use(self, power, startMinute):
-        # cycle appliance use
-        i = startMinute
-        for duration, load in self.appliance.useCycle:
-            for _ in range(duration):
-                while(i < 1440):
-                    power[i] += load
-                    i += 1
-        for duration, load in self.appliance.postUseCycle:
-            for _ in range(duration):
-                while(i < 1440):
-                    power[i] += load
-                    i += 1
-        
     
-    def use(self, power, startMinute, duration):
-        # continuous appliance
-        for i in range(startMinute, min(1440, startMinute + duration)):
-            power[i] += self.appliance.load
+    def use(self, power, startMinute, duration = None):
+        if self.appliance.continuous:
+            # continuous appliance
+            for i in range(startMinute, min(1440, startMinute + duration)):
+                power[i] += self.appliance.load
+        else:
+            # cycle appliance use
+            i = startMinute
+            for duration, load in self.appliance.useCycle:
+                for _ in range(duration):
+                    while(i < 1440):
+                        power[i] += load
+                        i += 1
+            for duration, load in self.appliance.postUseCycle:
+                for _ in range(duration):
+                    while(i < 1440):
+                        power[i] += load
+                        i += 1
 
 
 class HumanAgent(Agent):
@@ -58,7 +57,7 @@ class HumanAgent(Agent):
         super().__init__(unique_id, model)
         self.appliances = { a.appliance.name : a for a in applianceAgents }
         self.age = age
-        self.food = 60
+        self.food = 60 + 480
         self.meal_of_the_day = 1
         self.dishes = 0
         self.laundry_capacity = 1440 * 7 / 2
@@ -66,18 +65,17 @@ class HumanAgent(Agent):
         # self.energy = 100
 
         self.busy_until = 0
-        self.power = [0] * 1440
+        self.power = [10] * 1440 # ambient power usage, e.g. phone charging
 
     def schedule_activity(self, current_step):
         activity_length = 1 # resting - time filler
 
+
         # initial sleep of 8 hours
         if(current_step == 0):
             activity_length = 480
-
-
-        # first and foremost, the user will worry about how hungry they are
-        if (self.food < 0):
+        # the user will worry about how hungry they are
+        elif (self.food < 0 or random.randint(0, 100) > self.food):
             # make something
             if (self.meal_of_the_day == 1):
                 # make breakfast using kettle
@@ -89,27 +87,31 @@ class HumanAgent(Agent):
                 self.appliances["stove"].use(self.power, current_step, 20)
                 activity_length = 40
                 self.food += 300
-            else:
+            elif (self.meal_of_the_day == 3):
                 # dinner using oven and stove
-                self.appliances["stove"].use(self.power, current_step, 10)
-                self.appliances["oven"].use(self.power, current_step + 15, 25)
+                self.appliances["oven"].use(self.power, current_step, 40)
+                self.appliances["stove"].use(self.power, current_step + 5, 10)
                 activity_length = 60
                 self.food += 400 # 360 until the end of the day and then another 60 for the morning after ;)
-        
+            # switch to next meal
+            self.meal_of_the_day += 1
         # then they will check their laundry
-        if (self.laundry > self.laundry_capacity):
+        elif (self.laundry > self.laundry_capacity):
             activity_length = 5
             self.appliances["washing machine"].use(self.power, current_step)
-        
         # 20-30 minute interval using computer,
         # this is roughly 8 hours, so
         # 8/14 of the hours awake and not eating
-        if (random.randint(0, 12) < 8):
+        elif (random.randint(0, 12) < 8):
             activity_length = random.randint(20, 30)
             # computer use
             self.appliances["computer"].use(self.power, current_step, activity_length)
 
         self.busy_until = self.model.schedule.steps + activity_length
+
+        # update state of human
+        self.food -= activity_length
+        self.laundry += activity_length
 
     def step(self):
         if(self.busy_until <= self.model.schedule.steps):
