@@ -18,7 +18,7 @@ for _ in range(1440):
 household_result = [ sum([ test_model.humanAgents[i].power[x] for i in range(test_model.num_human_agents)]) for x in range(1440) ]
 x = np.arange(0, 1440)
 y = np.array(household_result)
- 
+
 # plotting
 plt.title("Line graph")
 plt.xlabel("t (minute)")
