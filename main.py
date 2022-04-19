@@ -1,3 +1,4 @@
+from cgi import test
 from mesa import Agent, Model
 from mesa.time import RandomActivation
 import random
@@ -23,15 +24,6 @@ class CycleAppliance(Appliance):
         self.useCycleLength = sum([ y for (x, y) in useCycle])
         self.postUseCycleLength = sum([ y for (x, y) in postUseCycle])
         self.scaling = scaling
-
-
-global_appliances = {
-    "washing machine": CycleAppliance("washing machine", [(0, 5)], [(2000, 20), (100, 30), (500, 5), (100, 15), (500, 10)], [1]),
-    "computer": ContinuousAppliance("computer", 200, [1]),
-    "oven": ContinuousAppliance("oven", 2300, [1, 1.5, 1.8, 2, 2, 2, 2, 2]),
-    "kettle": CycleAppliance("kettle", [(0, 1)], [(2000, 3)], [1, 1.5, 1.5]),
-    "stove": ContinuousAppliance("stove", 1000, [1, 1.5, 2, 2.5, 3, 3])
-}
 
 
 class ApplianceAgent(Agent):
@@ -118,17 +110,13 @@ class HouseModel(Model):
         self.schedule = RandomActivation(self)
         # Create agents
         applianceAgents = [ ApplianceAgent(i, self, appliance) for i, appliance in enumerate(appliances) ]
-        humanAgents = [ HumanAgent(i, self, applianceAgents, age) for i, age in enumerate(humans) ]
+        self.humanAgents = [ HumanAgent(i, self, applianceAgents, age) for i, age in enumerate(humans) ]
         
         for i in range(self.num_human_agents):
-            self.schedule.add(humanAgents[i])
+            self.schedule.add(self.humanAgents[i])
 
     def step(self):
         self.schedule.step()
-
-test_model = HouseModel([21], global_appliances.values())
-for _ in range(1440):
-    test_model.step()
 
 # request handler to process appliances and humans
 
