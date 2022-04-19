@@ -11,17 +11,19 @@ global_appliances = {
     "stove": ContinuousAppliance("stove", 1000, [1, 1.5, 2, 2.5, 3, 3])
 }
 
-test_model = HouseModel([21], global_appliances.values())
-for _ in range(1440):
-    test_model.step()
-
-household_result = [ sum([ test_model.humanAgents[i].power[x] for i in range(test_model.num_human_agents)]) for x in range(1440) ]
-x = np.arange(0, 1440)
-y = np.array(household_result)
-
 # plotting
-plt.title("Line graph")
+plt.title("Load graph")
 plt.xlabel("t (minute)")
 plt.ylabel("power usage (watts)")
-plt.plot(x, y, color ="green")
+
+for _ in range(20):
+    test_model = HouseModel([21], global_appliances.values())
+    for _ in range(1440):
+        test_model.step()
+
+    household_result = [ sum([ test_model.humanAgents[i].power[x] for i in range(test_model.num_human_agents)]) for x in range(1440) ]
+    x = np.arange(0, 1440)
+    y = np.array(household_result)
+
+    plt.plot(x, y)
 plt.show()

@@ -22,8 +22,8 @@ class CycleAppliance(Appliance):
         super().__init__(name, False)
         self.useCycle = useCycle
         self.postUseCycle = postUseCycle
-        self.useCycleLength = sum([ y for (x, y) in useCycle])
-        self.postUseCycleLength = sum([ y for (x, y) in postUseCycle])
+        self.useCycleLength = sum([ y for _, y in useCycle])
+        self.postUseCycleLength = sum([ y for _, y in postUseCycle])
         self.scaling = scaling
 
 
@@ -40,14 +40,14 @@ class ApplianceAgent(Agent):
         else:
             # cycle appliance use
             i = startMinute
-            for duration, load in self.appliance.useCycle:
-                for _ in range(duration):
-                    while(i < 1440):
+            for load, segment_duration in self.appliance.useCycle:
+                for _ in range(segment_duration):
+                    if(i < 1440):
                         power[i] += load
                         i += 1
-            for duration, load in self.appliance.postUseCycle:
-                for _ in range(duration):
-                    while(i < 1440):
+            for load, segment_duration in self.appliance.postUseCycle:
+                for _ in range(segment_duration):
+                    if(i < 1440):
                         power[i] += load
                         i += 1
 
