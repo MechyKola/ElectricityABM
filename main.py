@@ -5,22 +5,23 @@ import random
 
 
 class Appliance:
-    def __init__(self, name, continuous):
+    def __init__(self, name, busy_time, continuous):
         self.name = name
         self.continuous = continuous
         self.busy = False
+        self.busy_time = busy_time
 
 
 class ContinuousAppliance(Appliance):
-    def __init__(self, name, load, scaling):
-        super().__init__(name, True)
+    def __init__(self, name, busy_time, load, scaling):
+        super().__init__(name, busy_time, True)
         self.load = load[0]
         self.scaling = scaling
     
 
 class CycleAppliance(Appliance):
-    def __init__(self, name, load, scaling):
-        super().__init__(name, False)
+    def __init__(self, name, busy_time, load, scaling):
+        super().__init__(name, busy_time, False)
         self.load = load
         self.scaling = scaling
 
@@ -54,11 +55,14 @@ class HumanAgent(Agent):
         self.laundry_capacity = 1440 * 7 / 2
         self.laundry = random.randint(0, self.laundry_capacity)
         self.model = model
+        self.meal_left = 0
+        self.cooking_finishing = -1
 
         self.busy_until = 0
         self.power = [10] * 1440 # ambient power usage, e.g. phone charging
 
     def cook(self, current_step):
+        activity_length = food = 0
         if (self.meal_of_the_day == 1):
             # make breakfast using kettle
             self.appliances["kettle"].use(self.power, current_step)
@@ -71,8 +75,8 @@ class HumanAgent(Agent):
             food = 300
         elif (self.meal_of_the_day == 3):
             # dinner using oven and stove
-            self.appliances["oven"].use(self.power, current_step, 40)
-            self.appliances["stove"].use(self.power, current_step + 5, 10)
+            self.appliances["oven"].use(self.power, current_step)
+            self.appliances["stove"].use(self.power, current_step + 5, 20)
             activity_length = 60
             food = 400 # 360 until the end of the day and then another 60 for the morning after ;)
         # switch to next meal
@@ -86,16 +90,25 @@ class HumanAgent(Agent):
         # initial sleep of 8 hours +- 15 min
         if(current_step == 0):
             activity_length = 480 - 15 + random.randint(0, 31)
-        # the user will worry about how hungry they are
+        # pour meals that have been cooked and eat
+        elif (self.cooking_finishing == current_step):
+            for human in self.model.humanAgents:
+                human.meal_left += self.meal_left
+        # eat any meals prepared for them
+        elif (self.meal_left > 0):
+            activity_length = self.meal_left
+            self.meal_left = 0
+        # cook if user food is too low
         elif (self.food < 0 or random.randint(0, 100) > self.food):
-            # make something
             activity_length, food = self.cook(current_step)
             for human in self.model.humanAgents:
                 human.food += food
+            self.cooking_finishing = current_step + activity_length
+            self.meal_left = food // 10
         # then they will check their laundry
         elif (self.laundry > self.laundry_capacity):
-            activity_length = self.appliances["washing machine"].appliance.useCycleLength
-            self.appliances["washing machine"].use(self.power, current_step)
+            activity_length = self.appliances["washing_machine"].appliance.busy_time
+            self.appliances["washing_machine"].use(self.power, current_step)
             self.laundry -= self.laundry_capacity
         # 20-30 minute interval using computer,
         # this is roughly 8 hours, so
@@ -117,22 +130,39 @@ class HumanAgent(Agent):
 
 
 class HouseModel(Model):
-    def __init__(self, humans, appliances):
+    def __init__(self, humans, appliances, sunrise, sunset, lightingMultiplier):
         self.num_human_agents = len(humans)
         self.num_appliance_agents = len(appliances)
         self.schedule = RandomActivation(self)
+        self.lightingMultiplier = lightingMultiplier
         # Create agents
         applianceAgents = [ ApplianceAgent(i, self, appliance) for i, appliance in enumerate(appliances) ]
         self.humanAgents = [ HumanAgent(i, self, applianceAgents, age) for i, age in enumerate(humans) ]
 
-        self.lightingEvents = []
+        self.lightingEvents = [(sunrise, - self.num_human_agents)]
         self.applianceEvents = []
+        self.extraPower = [0] * 1440
         
         for i in range(self.num_human_agents):
+            self.lightingEvents.append((sunset + random.randint(-30, 30), 1))
             self.schedule.add(self.humanAgents[i])
 
     def step(self):
         self.schedule.step()
+
+    def processLighting(self):
+        self.lightingEvents.sort()
+
+        users = self.num_human_agents
+
+        for i in range(1440):
+            while self.lightingEvents and self.lightingEvents[0] == i:
+                users += self.lightingEvents[1]
+                self.lightingEvents = self.lightingEvents[1:]
+            self.extraPower[i] += users * self.lightingMultiplier
+
+
+
 
 # request handler to process appliances and humans
 
