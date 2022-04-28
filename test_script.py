@@ -4,11 +4,8 @@ import matplotlib.pyplot as plt
 from main import *
 
 global_appliances = {
-    "washing machine": CycleAppliance("washing machine", [(0, 5)], [(2000, 20), (100, 30), (500, 5), (100, 15), (500, 10)], [1]),
-    "computer": ContinuousAppliance("computer", 200, [1]),
-    "oven": ContinuousAppliance("oven", 2300, [1, 1.5, 1.8, 2, 2, 2, 2, 2]),
-    "kettle": CycleAppliance("kettle", [(0, 1)], [(2000, 3)], [1, 1.5, 1.5]),
-    "stove": ContinuousAppliance("stove", 1000, [1, 1.5, 2, 2.5, 3, 3])
+    "kettle": CycleAppliance("kettle", [3000, 3000, 3000], [1, 1.5, 1.5]),
+    "stove": ContinuousAppliance("stove", [1000], [1, 1.5, 2, 2.5, 3, 3])
 }
 
 # load appliances

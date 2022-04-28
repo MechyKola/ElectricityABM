@@ -8,22 +8,20 @@ class Appliance:
     def __init__(self, name, continuous):
         self.name = name
         self.continuous = continuous
+        self.busy = False
 
 
 class ContinuousAppliance(Appliance):
     def __init__(self, name, load, scaling):
         super().__init__(name, True)
-        self.load = load
+        self.load = load[0]
         self.scaling = scaling
     
 
 class CycleAppliance(Appliance):
-    def __init__(self, name, useCycle, postUseCycle, scaling):
+    def __init__(self, name, load, scaling):
         super().__init__(name, False)
-        self.useCycle = useCycle
-        self.postUseCycle = postUseCycle
-        self.useCycleLength = sum([ y for _, y in useCycle])
-        self.postUseCycleLength = sum([ y for _, y in postUseCycle])
+        self.load = load
         self.scaling = scaling
 
 
@@ -40,16 +38,9 @@ class ApplianceAgent(Agent):
         else:
             # cycle appliance use
             i = startMinute
-            for load, segment_duration in self.appliance.useCycle:
-                for _ in range(segment_duration):
-                    if(i < 1440):
-                        power[i] += load
-                        i += 1
-            for load, segment_duration in self.appliance.postUseCycle:
-                for _ in range(segment_duration):
-                    if(i < 1440):
-                        power[i] += load
-                        i += 1
+            for p in self.appliance.load:
+                if(i < 1440):
+                    power[i] += p
 
 
 class HumanAgent(Agent):
@@ -62,39 +53,45 @@ class HumanAgent(Agent):
         self.dishes = 0
         self.laundry_capacity = 1440 * 7 / 2
         self.laundry = random.randint(0, self.laundry_capacity)
-        # self.energy = 100
+        self.model = model
 
         self.busy_until = 0
         self.power = [10] * 1440 # ambient power usage, e.g. phone charging
 
+    def cook(self, current_step):
+        if (self.meal_of_the_day == 1):
+            # make breakfast using kettle
+            self.appliances["kettle"].use(self.power, current_step)
+            activity_length = 20
+            food = 240
+        elif (self.meal_of_the_day == 2):
+            # lunch using stove
+            self.appliances["stove"].use(self.power, current_step, 20)
+            activity_length = 40
+            food = 300
+        elif (self.meal_of_the_day == 3):
+            # dinner using oven and stove
+            self.appliances["oven"].use(self.power, current_step, 40)
+            self.appliances["stove"].use(self.power, current_step + 5, 10)
+            activity_length = 60
+            food = 400 # 360 until the end of the day and then another 60 for the morning after ;)
+        # switch to next meal
+        self.meal_of_the_day += 1
+
+        return activity_length, food
+
+
     def schedule_activity(self, current_step):
         activity_length = 1 # resting - time filler
-
-
         # initial sleep of 8 hours +- 15 min
         if(current_step == 0):
             activity_length = 480 - 15 + random.randint(0, 31)
         # the user will worry about how hungry they are
         elif (self.food < 0 or random.randint(0, 100) > self.food):
             # make something
-            if (self.meal_of_the_day == 1):
-                # make breakfast using kettle
-                self.appliances["kettle"].use(self.power, current_step)
-                activity_length = 20
-                self.food += 240
-            elif (self.meal_of_the_day == 2):
-                # lunch using stove
-                self.appliances["stove"].use(self.power, current_step, 20)
-                activity_length = 40
-                self.food += 300
-            elif (self.meal_of_the_day == 3):
-                # dinner using oven and stove
-                self.appliances["oven"].use(self.power, current_step, 40)
-                self.appliances["stove"].use(self.power, current_step + 5, 10)
-                activity_length = 60
-                self.food += 400 # 360 until the end of the day and then another 60 for the morning after ;)
-            # switch to next meal
-            self.meal_of_the_day += 1
+            activity_length, food = self.cook(current_step)
+            for human in self.model.humanAgents:
+                human.food += food
         # then they will check their laundry
         elif (self.laundry > self.laundry_capacity):
             activity_length = self.appliances["washing machine"].appliance.useCycleLength
