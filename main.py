@@ -71,9 +71,9 @@ class HumanAgent(Agent):
         activity_length = 1 # resting - time filler
 
 
-        # initial sleep of 8 hours
+        # initial sleep of 8 hours +- 15 min
         if(current_step == 0):
-            activity_length = 480
+            activity_length = 480 - 15 + random.randint(0, 31)
         # the user will worry about how hungry they are
         elif (self.food < 0 or random.randint(0, 100) > self.food):
             # make something
@@ -127,6 +127,9 @@ class HouseModel(Model):
         # Create agents
         applianceAgents = [ ApplianceAgent(i, self, appliance) for i, appliance in enumerate(appliances) ]
         self.humanAgents = [ HumanAgent(i, self, applianceAgents, age) for i, age in enumerate(humans) ]
+
+        self.lightingEvents = []
+        self.applianceEvents = []
         
         for i in range(self.num_human_agents):
             self.schedule.add(self.humanAgents[i])

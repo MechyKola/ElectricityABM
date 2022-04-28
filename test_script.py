@@ -11,8 +11,20 @@ global_appliances = {
     "stove": ContinuousAppliance("stove", 1000, [1, 1.5, 2, 2.5, 3, 3])
 }
 
-with open('appliances_data.csv') as f:
-    output = [float(s) for line in f.readlines() for s in line[:-1].split(',')]
+# load appliances
+with open('appliances_data.csv') as data,\
+    open('appliance_busy') as busy,\
+    open('applinace_name') as names,\
+    open('appliance scaling') as scalings:
+    for name in names.readline():
+        load = [ int(x) for x in data.readline()[:-1].split(',') ]
+        busy_time = int(busy.readline()[:-1])
+        scaling = [ int(x) for x in scalings.readline()[:-1].split(',') ]
+
+        if len(load) > 1:
+            global_appliances[name] = CycleAppliance(name, data, scaling)
+        else:
+            global_appliances[name] = ContinuousAppliance(name, data, scaling)
 
 # plotting
 plt.title("Load graph")
@@ -22,7 +34,7 @@ plt.ylabel("power usage (watts)")
 allHouses = [ 0 for _ in range(1440) ]
 
 for _ in range(20):
-    test_model = HouseModel([21], global_appliances.values())
+    test_model = HouseModel([18, 21], global_appliances.values())
     for _ in range(1440):
         test_model.step()
 
