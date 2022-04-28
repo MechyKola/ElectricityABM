@@ -9,19 +9,19 @@ global_appliances = {
 }
 
 # load appliances
-with open('appliances_data.csv') as data,\
-    open('appliance_busy') as busy,\
-    open('applinace_name') as names,\
-    open('appliance scaling') as scalings:
-    for name in names.readline():
+with open('appliance_data.csv') as data,\
+    open('appliance_busy.csv') as busy,\
+    open('appliance_names.csv') as names,\
+    open('appliance_scaling.csv') as scalings:
+    for name in names.readlines():
         load = [ int(x) for x in data.readline()[:-1].split(',') ]
         busy_time = int(busy.readline()[:-1])
-        scaling = [ int(x) for x in scalings.readline()[:-1].split(',') ]
+        scaling = [ float(x) for x in scalings.readline().split(',')[:-1] ]
 
         if len(load) > 1:
-            global_appliances[name] = CycleAppliance(name, data, scaling)
+            global_appliances[name] = CycleAppliance(name, load, scaling)
         else:
-            global_appliances[name] = ContinuousAppliance(name, data, scaling)
+            global_appliances[name] = ContinuousAppliance(name, load, scaling)
 
 # plotting
 plt.title("Load graph")
