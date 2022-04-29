@@ -42,6 +42,7 @@ class ApplianceAgent(Agent):
             for p in self.appliance.load:
                 if(i < 1440):
                     power[i] += p
+                    i += 1
 
 
 class HumanAgent(Agent):
@@ -59,7 +60,7 @@ class HumanAgent(Agent):
         self.cooking_finishing = -1
 
         self.busy_until = 0
-        self.power = [10] * 1440 # ambient power usage, e.g. phone charging
+        self.power = [50] * 1440 # ambient power usage, e.g. phone charging
 
     def cook(self, current_step):
         activity_length = food = 0
@@ -86,7 +87,7 @@ class HumanAgent(Agent):
 
 
     def schedule_activity(self, current_step):
-        activity_length = 1 # resting - time filler
+        activity_length = 1
         # initial sleep of 8 hours +- 15 min
         if(current_step == 0):
             activity_length = 480 - 15 + random.randint(0, 31)
@@ -106,44 +107,42 @@ class HumanAgent(Agent):
                 human.food += food
             self.cooking_finishing = current_step + activity_length
             self.meal_left = food // 10
-        # then they will check their laundry
         elif (self.laundry > self.laundry_capacity):
             if self.model.washing_machine_full:
-                # empty washing machine
                 if "dryer" in self.appliances:
                     self.appliances["dryer"].use(self.power, current_step)
                     activity_length = self.appliances["dryer"].appliance.busy_time
                 else:
+                    # manual drying
                     activity_length = 20
                 self.model.washing_machine_full = False
             else:
-                # actually do laundry
                 activity_length = self.appliances["washing_machine"].appliance.busy_time
                 self.appliances["washing_machine"].use(self.power, current_step)
                 self.laundry -= self.laundry_capacity
                 self.model.washing_machine_full = True
-        elif (self.model.dishes > 3):
+        elif (self.model.dishes > 5):
             if "dishwasher" in self.appliances:
                 self.appliances["dishwasher"].use(self.power, current_step)
             else:
                 # manual dishes
                 activity_length = self.model.dishes
             self.model.dishes = 0
-        # 20-30 minute interval using computer,
-        # this is roughly 8 hours, so
-        # 8/14 of the hours awake and not eating
         elif(self.model.washing_machine_full):
-            # empty washing machine
             if "dryer" in self.appliances:
                 self.appliances["dryer"].use(self.power, current_step)
                 activity_length = self.appliances["dryer"].appliance.busy_time
             else:
                 activity_length = 20
             self.model.washing_machine_full = False
-
+        # tv after dinner
+        elif ("TV" in self.appliances and self.meal_of_the_day == 4\
+             and current_step < random.randint(1020, 1200)):
+            activity_length = 1440 - current_step - random.randint(0, 120)
+            if activity_length > 0:
+                self.appliances["TV"].use(self.power, current_step, activity_length)
         elif (random.randint(0, 12) < 8):
             activity_length = random.randint(20, 30)
-            # computer use
             self.appliances["computer"].use(self.power, current_step, activity_length)
 
         self.busy_until = self.model.schedule.steps + activity_length

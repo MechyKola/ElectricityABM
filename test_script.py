@@ -28,7 +28,7 @@ plt.ylabel("power usage (watts)")
 
 allHouses = [0] * 1440
 
-for _ in range(5000):
+for _ in range(1000):
     test_model = HouseModel([21], global_appliances.values(), 360, 1200, 60)
     for _ in range(1440):
         test_model.step()
