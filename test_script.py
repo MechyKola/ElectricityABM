@@ -3,10 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from main import *
 
-global_appliances = {
-    "kettle": CycleAppliance("kettle", 1, [3000, 3000, 3000], [1, 1.5, 1.5]),
-    "stove": ContinuousAppliance("stove", 1, [1000], [1, 1.5, 2, 2.5, 3, 3])
-}
+global_appliances = {}
 
 # load appliances
 with open('appliance_data.csv') as data,\
@@ -29,10 +26,10 @@ plt.title("Load graph")
 plt.xlabel("t (minute)")
 plt.ylabel("power usage (watts)")
 
-allHouses = [ 0 for _ in range(1440) ]
+allHouses = [0] * 1440
 
-for _ in range(500):
-    test_model = HouseModel([18, 21], global_appliances.values(), 360, 1200, 60)
+for _ in range(5000):
+    test_model = HouseModel([21], global_appliances.values(), 360, 1200, 60)
     for _ in range(1440):
         test_model.step()
     test_model.processLighting()

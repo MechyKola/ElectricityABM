@@ -8,7 +8,7 @@ class Appliance:
     def __init__(self, name, busy_time, continuous):
         self.name = name
         self.continuous = continuous
-        self.busy = False
+        self.busy_until = 0
         self.busy_time = busy_time
 
 
@@ -69,14 +69,14 @@ class HumanAgent(Agent):
             activity_length = 20
             food = 240
         elif (self.meal_of_the_day == 2):
-            # lunch using stove
-            self.appliances["stove"].use(self.power, current_step, 20)
+            # lunch using hob
+            self.appliances["hob"].use(self.power, current_step, 20)
             activity_length = 40
             food = 300
         elif (self.meal_of_the_day == 3):
-            # dinner using oven and stove
+            # dinner using oven and hob
             self.appliances["oven"].use(self.power, current_step)
-            self.appliances["stove"].use(self.power, current_step + 5, 20)
+            self.appliances["hob"].use(self.power, current_step + 5, 20)
             activity_length = 60
             food = 400 # 360 until the end of the day and then another 60 for the morning after ;)
         # switch to next meal
@@ -98,6 +98,7 @@ class HumanAgent(Agent):
         elif (self.meal_left > 0):
             activity_length = self.meal_left
             self.meal_left = 0
+            self.model.dishes += 2 # add 2 minutes worth of dishes
         # cook if user food is too low
         elif (self.food < 0 or random.randint(0, 100) > self.food):
             activity_length, food = self.cook(current_step)
@@ -107,12 +108,39 @@ class HumanAgent(Agent):
             self.meal_left = food // 10
         # then they will check their laundry
         elif (self.laundry > self.laundry_capacity):
-            activity_length = self.appliances["washing_machine"].appliance.busy_time
-            self.appliances["washing_machine"].use(self.power, current_step)
-            self.laundry -= self.laundry_capacity
+            if self.model.washing_machine_full:
+                # empty washing machine
+                if "dryer" in self.appliances:
+                    self.appliances["dryer"].use(self.power, current_step)
+                    activity_length = self.appliances["dryer"].appliance.busy_time
+                else:
+                    activity_length = 20
+                self.model.washing_machine_full = False
+            else:
+                # actually do laundry
+                activity_length = self.appliances["washing_machine"].appliance.busy_time
+                self.appliances["washing_machine"].use(self.power, current_step)
+                self.laundry -= self.laundry_capacity
+                self.model.washing_machine_full = True
+        elif (self.model.dishes > 3):
+            if "dishwasher" in self.appliances:
+                self.appliances["dishwasher"].use(self.power, current_step)
+            else:
+                # manual dishes
+                activity_length = self.model.dishes
+            self.model.dishes = 0
         # 20-30 minute interval using computer,
         # this is roughly 8 hours, so
         # 8/14 of the hours awake and not eating
+        elif(self.model.washing_machine_full):
+            # empty washing machine
+            if "dryer" in self.appliances:
+                self.appliances["dryer"].use(self.power, current_step)
+                activity_length = self.appliances["dryer"].appliance.busy_time
+            else:
+                activity_length = 20
+            self.model.washing_machine_full = False
+
         elif (random.randint(0, 12) < 8):
             activity_length = random.randint(20, 30)
             # computer use
@@ -142,6 +170,8 @@ class HouseModel(Model):
         self.lightingEvents = [(sunrise, - self.num_human_agents)]
         self.applianceEvents = []
         self.extraPower = [0] * 1440
+        self.dishes = 0
+        self.washing_machine_full = random.randint(0, 20) < 3
         
         for i in range(self.num_human_agents):
             self.lightingEvents.append((sunset + random.randint(-30, 30), 1))
