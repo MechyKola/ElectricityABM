@@ -1,6 +1,7 @@
 # importing the library
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.dates as md
 from main import *
 
 global_appliances = {}
@@ -21,30 +22,40 @@ with open('appliance_data.csv') as data,\
         else:
             global_appliances[name] = ContinuousAppliance(name, busy_time, load, scaling)
 
-# plotting
-plt.title("Load graph")
-plt.xlabel("t (minute)")
-plt.ylabel("power usage (watts)")
-
 allHouses = [0] * 1440
 
-for _ in range(1000):
-    test_model = HouseModel([21], global_appliances.values(), 360, 1200, 60)
-    for _ in range(1440):
-        test_model.step()
-    test_model.processLighting()
+households = input('Enter occupants, seperating households with a semicolon, e.g. \"21 22 23; 10, 12, 35, 36; 65 70\": ')
+households = [ [ int(occupant) for occupant in house.split(' ') ] for house in households.split('; ') ]
+iterations = int(input('Enter number of iterations that you want to run: '))
 
-    household_result = [ sum([ test_model.humanAgents[i].power[x] for i in range(test_model.num_human_agents)]) for x in range(1440) ]
-    x = np.arange(0, 1440)
-    y = np.array(household_result)
+for _ in range(iterations):
+    for house in households:
+        test_model = HouseModel(house, global_appliances, 360, 1200, 60)
+        for _ in range(1440):
+            test_model.step()
+        test_model.processLighting()
+        test_model.processAppliances()
 
-    for j in range(1440):
-        allHouses[j] += household_result[j] + test_model.extraPower[j]
+        household_result = [ sum([ test_model.humanAgents[i].power[x] for i in range(test_model.num_human_agents)]) for x in range(1440) ]
 
-    plt.plot(x, y)
+        for j in range(1440):
+            allHouses[j] += test_model.extraPower[j] + household_result[j]
 
-x = np.arange(0, 1440)
-y = np.array(allHouses)
-plt.plot(x, y)
+
+# plotting
+dataY = np.array(allHouses)
+dataX = np.arange(0, 1, 1/1440) + 1 # preventing errors where time values are < 1
+
+fig, ax = plt.subplots()
+timeformat = md.DateFormatter('%H:%M')
+plt.Axes.format_xdata = timeformat
+ax.xaxis_date()
+ax.xaxis.set_major_formatter(timeformat)
+plt.xlim(1,2)
+
+plt.plot(dataX,dataY)
+plt.title("Load graph")
+plt.xlabel("Time [hh:mm]")
+plt.ylabel("power usage (watts)")
 
 plt.show()
