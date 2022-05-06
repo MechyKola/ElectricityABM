@@ -3,7 +3,6 @@ from mesa.time import RandomActivation
 import random
 import heapq
 
-
 class Appliance:
     def __init__(self, name, busy_time, continuous):
         self.name = name
@@ -31,15 +30,16 @@ class ApplianceAgent(Agent):
         super().__init__(unique_id, model)
         self.appliance = appliance
         self.lock = False
+        self.unique_id = unique_id
 
     def __eq__(self, other):
-        return self == other
+        return self.unique_id == other.unique_id
 
     def __ne__(self, other):
-        return not (self == other)
+        return not (self.unique_id == other.unique_id)
 
     def __lt__(self, other):
-        return True
+        return self.appliance.name < other.appliance.name
     
     def use(self, power, startMinute, num_users, duration = None):
         if self.lock == False:
@@ -205,7 +205,7 @@ class HouseModel(Model):
             self.schedule.add(self.humanAgents[i])
 
     def step(self):
-        while self.applianceUnlocks and self.applianceUnlocks[0][0] <= self.schedule.steps:
+        while self.applianceUnlocks and self.applianceUnlocks[0][0] < self.schedule.steps:
             self.applianceUnlocks[0][1].lock = False
             heapq.heappop(self.applianceUnlocks)
         self.schedule.step()
