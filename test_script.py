@@ -14,7 +14,7 @@ with open('appliance_data.csv') as data,\
         name = nameLine[:-1]
         load = [ int(x) for x in data.readline()[:-1].split(',') ]
         busy_time = int(busy.readline()[:-1])
-        scaling = [ float(x) for x in scalings.readline().split(',')[:-1] ]
+        scaling = [ float(x) for x in scalings.readline()[:-1].split(',') ]
 
         if len(load) > 1:
             global_appliances[name] = CycleAppliance(name, busy_time, load, scaling)

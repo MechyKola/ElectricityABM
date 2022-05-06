@@ -41,20 +41,20 @@ class ApplianceAgent(Agent):
     def __lt__(self, other):
         return True
     
-    def use(self, power, startMinute, duration = None):
+    def use(self, power, startMinute, num_users, duration = None):
         if self.lock == False:
             self.lock = True
             heapq.heappush(self.model.applianceUnlocks, (duration if duration else len(self.appliance.load), self))
             if self.appliance.continuous:
                 # continuous appliance
                 for i in range(startMinute, min(1440, startMinute + duration)):
-                    power[i] += self.appliance.load
+                    power[i] += self.appliance.load * self.appliance.scaling[num_users - 1]
             else:
                 # cycle appliance use
                 i = startMinute
                 for p in self.appliance.load:
                     if(i < 1440):
-                        power[i] += p
+                        power[i] += p * self.appliance.scaling[num_users - 1]
                         i += 1
             return True
         else:
@@ -84,18 +84,18 @@ class HumanAgent(Agent):
         activity_length = food = 0
         if (self.meal_of_the_day == 1):
             # make breakfast using kettle
-            self.appliances["kettle"].use(self.power, current_step)
+            self.appliances["kettle"].use(self.power, current_step, self.model.num_human_agents)
             activity_length = 20
             food = 240
         elif (self.meal_of_the_day == 2):
             # lunch using hob
-            self.appliances["hob"].use(self.power, current_step, 20)
+            self.appliances["hob"].use(self.power, current_step, self.model.num_human_agents, 20)
             activity_length = 40
             food = 300
         elif (self.meal_of_the_day == 3):
             # dinner using oven and hob
-            self.appliances["oven"].use(self.power, current_step)
-            self.appliances["hob"].use(self.power, current_step + 5, 20)
+            self.appliances["oven"].use(self.power, current_step, self.model.num_human_agents)
+            self.appliances["hob"].use(self.power, current_step + 5, self.model.num_human_agents, 20)
             activity_length = 60
             food = 400 # 360 until the end of the day and then another 60 for the morning after ;)
         # switch to next meal
@@ -136,7 +136,7 @@ class HumanAgent(Agent):
         elif (self.laundry > self.laundry_capacity):
             if self.model.washing_machine_full:
                 if "dryer" in self.appliances:
-                    self.appliances["dryer"].use(self.power, current_step)
+                    self.appliances["dryer"].use(self.power, current_step, 1)
                     activity_length = self.appliances["dryer"].appliance.busy_time
                 else:
                     # manual drying
@@ -144,19 +144,19 @@ class HumanAgent(Agent):
                 self.model.washing_machine_full = False
             else:
                 activity_length = self.appliances["washing_machine"].appliance.busy_time
-                self.appliances["washing_machine"].use(self.power, current_step)
+                self.appliances["washing_machine"].use(self.power, current_step, 1)
                 self.laundry -= self.laundry_capacity
                 self.model.washing_machine_full = True
         elif (self.model.dishes > 5):
             if "dishwasher" in self.appliances and not self.appliances["dishwasher"].lock:
-                self.appliances["dishwasher"].use(self.power, current_step)
+                self.appliances["dishwasher"].use(self.power, current_step, 1)
             else:
                 # manual dishes
                 activity_length = self.model.dishes
             self.model.dishes = 0
         elif(self.model.washing_machine_full):
             if "dryer" in self.appliances and not self.appliances["dryer"].lock:
-                self.appliances["dryer"].use(self.power, current_step)
+                self.appliances["dryer"].use(self.power, current_step, 1)
                 activity_length = self.appliances["dryer"].appliance.busy_time
             else:
                 activity_length = 20
@@ -169,7 +169,7 @@ class HumanAgent(Agent):
             self.model.applianceEvents.append((current_step + activity_length, "TV", -1))
         elif (random.randint(0, 12) < 8): # no lock as it is assumed each member has their own
             activity_length = random.randint(20, 30)
-            self.appliances["computer"].use(self.power, current_step, activity_length)
+            self.appliances["computer"].use(self.power, current_step, 1, activity_length)
 
         self.busy_until = self.model.schedule.steps + activity_length
 
