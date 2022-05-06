@@ -177,7 +177,7 @@ class HouseModel(Model):
         applianceAgents = [ ApplianceAgent(i, self, appliance) for i, appliance in enumerate(appliances.values()) ]
         self.humanAgents = [ HumanAgent(i, self, applianceAgents, age) for i, age in enumerate(humans) ]
 
-        self.lightingEvents = [] # [(sunrise, - self.num_human_agents)]
+        self.lightingEvents = []
         self.applianceEvents = []
         self.extraPower = [0] * 1440
         self.dishes = 0

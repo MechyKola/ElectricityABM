@@ -59,3 +59,10 @@ plt.xlabel("Time [hh:mm]")
 plt.ylabel("power usage (watts)")
 
 plt.show()
+
+# csv output
+np.savetxt("out.csv", 
+    allHouses,
+    delimiter =", ", 
+    fmt ='% s')
+    
