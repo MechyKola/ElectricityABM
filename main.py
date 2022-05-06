@@ -1,7 +1,9 @@
 from cgi import test
+from email.mime import application
 from mesa import Agent, Model
 from mesa.time import RandomActivation
 import random
+import heapq
 
 
 class Appliance:
@@ -30,19 +32,35 @@ class ApplianceAgent(Agent):
     def __init__(self, unique_id, model, appliance):
         super().__init__(unique_id, model)
         self.appliance = appliance
+        self.lock = False
+
+    def __eq__(self, other):
+        return self == other
+
+    def __ne__(self, other):
+        return not (self == other)
+
+    def __lt__(self, other):
+        return True
     
     def use(self, power, startMinute, duration = None):
-        if self.appliance.continuous:
-            # continuous appliance
-            for i in range(startMinute, min(1440, startMinute + duration)):
-                power[i] += self.appliance.load
+        if self.lock == False:
+            self.lock = True
+            heapq.heappush(self.model.applianceUnlocks, (duration if duration else len(self.appliance.load), self))
+            if self.appliance.continuous:
+                # continuous appliance
+                for i in range(startMinute, min(1440, startMinute + duration)):
+                    power[i] += self.appliance.load
+            else:
+                # cycle appliance use
+                i = startMinute
+                for p in self.appliance.load:
+                    if(i < 1440):
+                        power[i] += p
+                        i += 1
+            return True
         else:
-            # cycle appliance use
-            i = startMinute
-            for p in self.appliance.load:
-                if(i < 1440):
-                    power[i] += p
-                    i += 1
+            return False
 
 
 class HumanAgent(Agent):
@@ -132,14 +150,14 @@ class HumanAgent(Agent):
                 self.laundry -= self.laundry_capacity
                 self.model.washing_machine_full = True
         elif (self.model.dishes > 5):
-            if "dishwasher" in self.appliances:
+            if "dishwasher" in self.appliances and not self.appliances["dishwasher"].lock:
                 self.appliances["dishwasher"].use(self.power, current_step)
             else:
                 # manual dishes
                 activity_length = self.model.dishes
             self.model.dishes = 0
         elif(self.model.washing_machine_full):
-            if "dryer" in self.appliances:
+            if "dryer" in self.appliances and not self.appliances["dryer"].lock:
                 self.appliances["dryer"].use(self.power, current_step)
                 activity_length = self.appliances["dryer"].appliance.busy_time
             else:
@@ -151,7 +169,7 @@ class HumanAgent(Agent):
             activity_length = 1440 - current_step - random.randint(0, 120)
             self.model.applianceEvents.append((current_step, "TV", 1))
             self.model.applianceEvents.append((current_step + activity_length, "TV", -1))
-        elif (random.randint(0, 12) < 8):
+        elif (random.randint(0, 12) < 8): # no lock as it is assumed each member has their own
             activity_length = random.randint(20, 30)
             self.appliances["computer"].use(self.power, current_step, activity_length)
 
@@ -179,6 +197,7 @@ class HouseModel(Model):
 
         self.lightingEvents = []
         self.applianceEvents = []
+        self.applianceUnlocks = []
         self.extraPower = [0] * 1440
         self.dishes = 0
         self.washing_machine_full = random.randint(0, 20) < 3
@@ -188,6 +207,9 @@ class HouseModel(Model):
             self.schedule.add(self.humanAgents[i])
 
     def step(self):
+        while self.applianceUnlocks and self.applianceUnlocks[0][0] <= self.schedule.steps:
+            self.applianceUnlocks[0][1].lock = False
+            heapq.heappop(self.applianceUnlocks)
         self.schedule.step()
 
     def processAppliances(self):
