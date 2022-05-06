@@ -1,4 +1,3 @@
-# importing the library
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.dates as md
@@ -65,4 +64,3 @@ np.savetxt("out.csv",
     allHouses,
     delimiter =", ", 
     fmt ='% s')
-    

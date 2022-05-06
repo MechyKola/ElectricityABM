@@ -1,5 +1,3 @@
-from cgi import test
-from email.mime import application
 from mesa import Agent, Model
 from mesa.time import RandomActivation
 import random
