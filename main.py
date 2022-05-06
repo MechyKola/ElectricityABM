@@ -89,13 +89,13 @@ class HumanAgent(Agent):
             food = 240
         elif (self.meal_of_the_day == 2):
             # lunch using hob
-            self.appliances["hob"].use(self.power, current_step, self.model.num_human_agents, 20)
+            self.appliances["hob"].use(self.power, current_step + random.randint(0, 10), self.model.num_human_agents, 20)
             activity_length = 40
             food = 300
         elif (self.meal_of_the_day == 3):
             # dinner using oven and hob
             self.appliances["oven"].use(self.power, current_step, self.model.num_human_agents)
-            self.appliances["hob"].use(self.power, current_step + 5, self.model.num_human_agents, 20)
+            self.appliances["hob"].use(self.power, current_step + random.randint(5, 30), self.model.num_human_agents, 20)
             activity_length = 60
             food = 400 # 360 until the end of the day and then another 60 for the morning after ;)
         # switch to next meal
