@@ -110,7 +110,7 @@ class HumanAgent(Agent):
                 human.food += food
             self.cooking_finishing = current_step + activity_length
             self.meal_left = food // 10
-        elif (self.work_start == 0 and self.age >= 6 and self.age < 60):
+        elif (self.work_start == 0 and self.age >= 6 and self.age < 66):
             work_time = 480 + random.randint(20, 80) # commute random):
             activity_length = work_time
             self.meal_of_the_day = 3 # lunch and potentially breakfast at school/work
